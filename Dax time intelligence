@@ -1,0 +1,52 @@
+
+
+//Time intelligence  for grouping and calculations
+SummaryTable = 
+VAR MinOrderDate = MIN(Orders[OrderDateKey])
+VAR MaxShippedDate = MAX(Orders[ShipDateKey])
+
+RETURN
+SUMMARIZE(
+    CROSSJOIN(
+        CALENDAR(MinOrderDate, MaxShippedDate),
+        VALUES(Orders[Territory.Country])
+    ),
+    [Date],
+    Orders[Territory.Country],
+    "OrderAmount", CALCULATE(
+                        SUMX(Orders, Orders[SalesPrice] * Orders[OrderQuantity]),
+                        FILTER(Orders, Orders[OrderDateKey] = [Date] && Orders[Territory.Country] = EARLIER(Orders[Territory.Country]))
+                   ),
+    "ShippedAmount", CALCULATE(
+                        SUMX(Orders, Orders[SalesPrice] * Orders[OrderQuantity]),
+                        FILTER(Orders, Orders[ShipDateKey] = [Date] && Orders[Territory.Country] = EARLIER(Orders[Territory.Country]))
+                    ),
+     "WeekEnding", [Date] + (7 - WEEKDAY([Date], 2))
+     )
+
+
+//Time intelligence  for delay    
+AverageShippingDelay = 
+VAR TotalDelay = 
+    SUMX(
+        Orders,
+        DATEDIFF(Orders[OrderDateKey], Orders[ShipDateKey], DAY)
+    )
+VAR TotalOrders = COUNTROWS(Orders)
+RETURN
+IF(TotalOrders = 0, BLANK(), CONCATENATE( TotalDelay / TotalOrders , " days"))
+
+
+
+//Month over month calculation
+OrderAmount MoM% = 
+IF(
+	ISFILTERED('SummaryTable'[Date]),
+	VAR __PREV_MONTH =
+		CALCULATE(
+			SUM('SummaryTable'[OrderAmount]),
+			DATEADD('SummaryTable'[Date].[Date], -1, MONTH)
+		)
+	RETURN
+		DIVIDE(SUM('SummaryTable'[OrderAmount]) - __PREV_MONTH, __PREV_MONTH)
+)
