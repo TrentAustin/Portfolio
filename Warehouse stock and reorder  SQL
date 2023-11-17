@@ -1,0 +1,23 @@
+SELECT 
+    si.StockItemID, 
+    si.StockItemName, 
+    SUM(ol.Quantity) AS TotalQuantitySold,
+    SUM(Quantity * ol.UnitPrice) AS TotalRevenue,
+    si.StockItemID,
+    si.StockItemName, 
+    ih.QuantityOnHand,
+	si.LeadTimeDays,
+	si.UnitPrice,
+	ih.ReorderLevel,
+	ps.SupplierName,
+	case when ReorderLevel + 50 > QuantityOnHand
+	then 1
+	else 0
+	end 'reorder flag'
+
+FROM sales.OrderLines ol
+JOIN warehouse.StockItems si ON ol.StockItemID = si.StockItemID
+join sales.Orders o on o.OrderID = ol.OrderID
+join Warehouse.StockItemHoldings ih on ih.StockItemID = si.StockItemID
+join Purchasing.Suppliers ps on ps.SupplierID = si.SupplierID
+GROUP BY si.StockItemID, si.StockItemName,si.StockItemID,si.StockItemName,ih.QuantityOnHand,ih.ReorderLevel,si.LeadTimeDays,ps.SupplierName, si.UnitPrice
