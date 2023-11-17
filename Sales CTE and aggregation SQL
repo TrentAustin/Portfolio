@@ -1,0 +1,43 @@
+WITH SalesByMonth AS (
+    SELECT
+	    FORMAT(DATEADD(MONTH, DATEDIFF(MONTH, 0, i.InvoiceDate), 0), 'M/d/yyyy') AS StartOfMonth,
+        DATEPART(year, i.InvoiceDate) AS SaleYear,
+        DATEPART(month, i.InvoiceDate) AS SaleMonth,
+        SUM(il.ExtendedPrice) AS TotalSales,
+		sum(il.LineProfit) as TotalProfit,
+        COUNT(DISTINCT i.InvoiceID) AS NumberOfDeals
+    FROM Sales.Invoices i
+    JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+    GROUP BY FORMAT(DATEADD(MONTH, DATEDIFF(MONTH, 0, i.InvoiceDate), 0), 'M/d/yyyy'),DATEPART(year, i.InvoiceDate), DATEPART(month, i.InvoiceDate)
+),
+MOM_QOQ_Growth AS (
+    SELECT
+       StartOfMonth,
+		SaleYear,
+        SaleMonth,
+        TotalSales,
+		TotalProfit,
+        NumberOfDeals,
+        LAG(TotalSales, 1) OVER (ORDER BY SaleYear, SaleMonth) AS PreviousMonthSales,
+        LAG(TotalSales, 3) OVER (ORDER BY SaleYear, SaleMonth) AS PreviousQuarterSales
+    FROM SalesByMonth
+)
+SELECT
+    StartOfMonth,
+	SaleYear,
+    SaleMonth,
+    TotalSales,
+	TotalProfit,
+    NumberOfDeals,
+    CASE 
+        WHEN PreviousMonthSales IS NOT NULL THEN (TotalSales - PreviousMonthSales) / PreviousMonthSales
+        ELSE NULL 
+    END AS MOMGrowth,
+    CASE 
+        WHEN PreviousQuarterSales IS NOT NULL THEN (TotalSales - PreviousQuarterSales) / PreviousQuarterSales
+        ELSE NULL 
+    END AS QOQGrowth,
+    TotalSales / NumberOfDeals AS AverageDealSize
+FROM MOM_QOQ_Growth;
+
+
