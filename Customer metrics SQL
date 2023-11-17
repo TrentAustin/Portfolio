@@ -1,0 +1,34 @@
+WITH CustomerActivity AS (
+    SELECT
+        c.CustomerID,
+        c.CustomerName,
+        DATEPART(year, o.OrderDate) AS Year,
+        COUNT(DISTINCT o.OrderID) AS TotalOrders,
+        SUM(il.LineProfit) AS TotalRevenue
+    FROM Sales.Customers c
+    JOIN Sales.Orders o ON c.CustomerID = o.CustomerID
+ JOIN Sales.Invoices i ON o.OrderID = i.OrderID
+    JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+    GROUP BY c.CustomerID, c.CustomerName, DATEPART(year, o.OrderDate)
+),
+YearlyComparison AS (
+    SELECT
+        CustomerID,
+        CustomerName,
+        Year,
+        TotalOrders,
+        TotalRevenue,
+        LAG(TotalOrders, 1) OVER (PARTITION BY CustomerID ORDER BY Year) AS PreviousYearOrders,
+        LAG(TotalRevenue, 1) OVER (PARTITION BY CustomerID ORDER BY Year) AS PreviousYearRevenue
+    FROM CustomerActivity
+)
+SELECT
+    CustomerID,
+    CustomerName,
+    Year,
+    TotalOrders,
+    TotalRevenue,
+    PreviousYearOrders,
+    PreviousYearRevenue
+FROM YearlyComparison
+ORDER BY CustomerID, Year;
