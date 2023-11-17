@@ -1,0 +1,13 @@
+SELECT
+    e.FullName,
+    COUNT(DISTINCT i.InvoiceID) AS NumberOfTransactions,
+    SUM(il.LineProfit) AS TotalSales,
+    AVG(il.LineProfit) AS AverageDealSize,
+    COUNT(DISTINCT c.CustomerID) AS UniqueCustomers,
+    FORMAT(i.InvoiceDate, 'yyyy-MM-01') AS MonthStart
+FROM Application.People e
+JOIN Sales.Invoices i ON e.PersonID = i.SalespersonPersonID
+JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+JOIN Sales.Customers c ON i.CustomerID = c.CustomerID
+GROUP BY FullName,FORMAT(i.InvoiceDate, 'yyyy-MM-01')
+ORDER BY TotalSales DESC;
